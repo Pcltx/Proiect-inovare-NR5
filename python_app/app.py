@@ -21,7 +21,7 @@ class App(customtkinter.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("Ultrasonic Sensor Dashboard")
+        self.title("Dashboard")
         self.geometry("900x600")
 
         # Layout configuration
@@ -33,15 +33,15 @@ class App(customtkinter.CTk):
         self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
         self.sidebar_frame.grid_rowconfigure(4, weight=1)
 
-        self.logo_label = customtkinter.CTkLabel(self.sidebar_frame, text="Sensor Dashboard", font=customtkinter.CTkFont(size=20, weight="bold"))
+        self.logo_label = customtkinter.CTkLabel(self.sidebar_frame, text="Sensor", font=customtkinter.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
 
         # Connection controls
-        self.com_port_var = customtkinter.StringVar(value="Select Port")
+        self.com_port_var = customtkinter.StringVar(value="Selecteaza portul")
         self.port_menu = customtkinter.CTkOptionMenu(self.sidebar_frame, variable=self.com_port_var, values=self.get_available_ports())
         self.port_menu.grid(row=1, column=0, padx=20, pady=10)
 
-        self.refresh_btn = customtkinter.CTkButton(self.sidebar_frame, text="Refresh Ports", command=self.refresh_ports)
+        self.refresh_btn = customtkinter.CTkButton(self.sidebar_frame, text="Refresh", command=self.refresh_ports)
         self.refresh_btn.grid(row=2, column=0, padx=20, pady=10)
 
         self.connect_btn = customtkinter.CTkButton(self.sidebar_frame, text="Connect", command=self.toggle_connection)
