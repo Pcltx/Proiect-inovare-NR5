@@ -22,6 +22,7 @@ class App(customtkinter.CTk):
         super().__init__()
 
         self.title("Dashboard")
+        self.alert_threshold = 20 # Default threshold in cm
         self.geometry("900x600")
 
         # Layout configuration
@@ -49,6 +50,14 @@ class App(customtkinter.CTk):
         
         self.connect_info = customtkinter.CTkLabel(self.sidebar_frame, text="Status: Disconnected", text_color="gray")
         self.connect_info.grid(row=4, column=0, padx=20, pady=10, sticky="s")
+
+        # Threshold Control
+        self.threshold_label = customtkinter.CTkLabel(self.sidebar_frame, text=f"Threshold: {self.alert_threshold} cm")
+        self.threshold_label.grid(row=5, column=0, padx=20, pady=(20, 0))
+        
+        self.threshold_slider = customtkinter.CTkSlider(self.sidebar_frame, from_=0, to=100, number_of_steps=100, command=self.update_threshold)
+        self.threshold_slider.set(self.alert_threshold)
+        self.threshold_slider.grid(row=6, column=0, padx=20, pady=(0, 20))
 
         # Main content area
         self.main_frame = customtkinter.CTkFrame(self, corner_radius=10)
@@ -83,6 +92,7 @@ class App(customtkinter.CTk):
         self.thread = None
         
         # Audio Alert State
+        self.last_beep_time = 0
         self.last_beep_time = 0
 
     def get_available_ports(self):
@@ -123,6 +133,10 @@ class App(customtkinter.CTk):
         self.connect_btn.configure(text="Connect", fg_color="#1f538d", hover_color="#14375e") # restore default blue
         self.connect_info.configure(text="Status: Disconnected", text_color="gray")
 
+    def update_threshold(self, value):
+        self.alert_threshold = int(value)
+        self.threshold_label.configure(text=f"Threshold: {self.alert_threshold} cm")
+
     def read_serial_data(self):
         while self.is_running and self.serial_conn and self.serial_conn.is_open:
             try:
@@ -140,8 +154,8 @@ class App(customtkinter.CTk):
                 break
     
     def check_alert(self, val):
-        # Alert if between 10 and 20 cm
-        if 10 <= val <= 20:
+        # Alert if below threshold
+        if 2 <= val <= self.alert_threshold:
             current_time = time.time()
             # Limit beep frequency (e.g., every 500ms max if needed, but here we just beep on every data packet which is spaced by Arduino's 50ms delay)
             # 50ms interval might be too fast for continuous beeping, so let's limit it.
@@ -165,7 +179,7 @@ class App(customtkinter.CTk):
 
     def _update_ui_internal(self, value):
         # Update Text and Color
-        if 10 <= value <= 20:
+        if value <= self.alert_threshold:
             self.distance_label.configure(text=f"{int(value)} cm", text_color="red")
         else:
             self.distance_label.configure(text=f"{int(value)} cm", text_color=("black", "white")) # Reset to theme default
