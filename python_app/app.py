@@ -8,12 +8,12 @@ import platform
 import os
 import time
 
-# Check OS for sound
+# Verifică sistemul de operare pentru sunet
 system_os = platform.system()
 if system_os == "Windows":
     import winsound
 
-# Configure appearance
+# Configurează aspectul aplicatiei 
 customtkinter.set_appearance_mode("Dark")
 customtkinter.set_default_color_theme("blue")
 
@@ -22,14 +22,14 @@ class App(customtkinter.CTk):
         super().__init__()
 
         self.title("Dashboard")
-        self.alert_threshold = 20 # Default threshold in cm
+        self.alert_threshold = 20 # Prag implicit în cm 
         self.geometry("900x600")
 
-        # Layout configuration
+        # Configurare aspect
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        # Sidebar frame
+        # Cadru bară laterală
         self.sidebar_frame = customtkinter.CTkFrame(self, width=140, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
         self.sidebar_frame.grid_rowconfigure(4, weight=1)
@@ -37,7 +37,7 @@ class App(customtkinter.CTk):
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame, text="Sensor", font=customtkinter.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
 
-        # Connection controls
+        # Controale conexiune
         self.com_port_var = customtkinter.StringVar(value="Selecteaza portul")
         self.port_menu = customtkinter.CTkOptionMenu(self.sidebar_frame, variable=self.com_port_var, values=self.get_available_ports())
         self.port_menu.grid(row=1, column=0, padx=20, pady=10)
@@ -51,7 +51,7 @@ class App(customtkinter.CTk):
         self.connect_info = customtkinter.CTkLabel(self.sidebar_frame, text="Status: Disconnected", text_color="gray")
         self.connect_info.grid(row=4, column=0, padx=20, pady=10, sticky="s")
 
-        # Threshold Control
+        # Control prag
         self.threshold_label = customtkinter.CTkLabel(self.sidebar_frame, text=f"Threshold: {self.alert_threshold} cm")
         self.threshold_label.grid(row=5, column=0, padx=20, pady=(20, 0))
         
@@ -59,13 +59,13 @@ class App(customtkinter.CTk):
         self.threshold_slider.set(self.alert_threshold)
         self.threshold_slider.grid(row=6, column=0, padx=20, pady=(0, 20))
 
-        # Main content area
+        # Zona principală de conținut
         self.main_frame = customtkinter.CTkFrame(self, corner_radius=10)
         self.main_frame.grid(row=0, column=1, padx=20, pady=20, sticky="nsew")
         self.main_frame.grid_columnconfigure(0, weight=1)
         self.main_frame.grid_rowconfigure(2, weight=1)
 
-        # Distance Display
+        # Afișare distanță
         self.value_frame = customtkinter.CTkFrame(self.main_frame, fg_color="transparent")
         self.value_frame.grid(row=0, column=0, pady=(20, 0))
         
@@ -73,25 +73,25 @@ class App(customtkinter.CTk):
         self.distance_label.pack()
 
 
-        # Canvas Graph
+        # Grafic Canvas
         self.graph_height = 300
         self.graph_canvas = tkinter.Canvas(self.main_frame, height=self.graph_height, bg="#2b2b2b", highlightthickness=0)
         self.graph_canvas.grid(row=2, column=0, padx=20, pady=20, sticky="nsew")
         
-        # Bind resize event to redraw graph
+        # Leagă evenimentul de redimensionare pentru a redesena graficul
         self.graph_canvas.bind("<Configure>", self.on_canvas_resize)
 
-        # Data
+        # Date
         self.data_len = 100
         self.data_y = collections.deque([0] * self.data_len, maxlen=self.data_len)
-        self.canvas_width = 100 # Initial placeholder
+        self.canvas_width = 100 # Substituent inițial
 
-        # Serial Variables
+        # Variabile seriale
         self.serial_conn = None
         self.is_running = False
         self.thread = None
         
-        # Audio Alert State
+        # Stare alertă audio
         self.last_beep_time = 0
         self.last_beep_time = 0
 
@@ -119,7 +119,7 @@ class App(customtkinter.CTk):
             self.connect_btn.configure(text="Disconnect", fg_color="red", hover_color="darkred")
             self.connect_info.configure(text="Status: Connected", text_color="green")
             
-            # Start reader thread
+            # Pornește firul de execuție pentru citire
             self.thread = threading.Thread(target=self.read_serial_data, daemon=True)
             self.thread.start()
         except Exception as e:
@@ -130,7 +130,7 @@ class App(customtkinter.CTk):
         self.is_running = False
         if self.serial_conn:
             self.serial_conn.close()
-        self.connect_btn.configure(text="Connect", fg_color="#1f538d", hover_color="#14375e") # restore default blue
+        self.connect_btn.configure(text="Connect", fg_color="#1f538d", hover_color="#14375e") # restabilește albastrul implicit
         self.connect_info.configure(text="Status: Disconnected", text_color="gray")
 
     def update_threshold(self, value):
@@ -147,23 +147,24 @@ class App(customtkinter.CTk):
                         self.check_alert(val)
                         self.update_ui(val)
                     except ValueError:
-                        pass # Ignore non-numeric data
+                        pass 
+
             except Exception as e:
                 print(f"Read Error: {e}")
                 self.is_running = False
                 break
     
     def check_alert(self, val):
-        # Alert if below threshold
+        # Alertă dacă este sub prag
         if 2 <= val <= self.alert_threshold:
             current_time = time.time()
-            # Limit beep frequency (e.g., every 500ms max if needed, but here we just beep on every data packet which is spaced by Arduino's 50ms delay)
-            # 50ms interval might be too fast for continuous beeping, so let's limit it.
-            if current_time - self.last_beep_time > 0.3: # Beep max every 300ms
+            # Limitează frecvența beep-urilor (de exemplu, maxim la fiecare 500ms dacă e necesar, dar aici dăm beep la fiecare pachet de date care e distanțat de delay-ul de 50ms al Arduino)
+            # Intervalul de 50ms ar putea fi prea rapid pentru beep-uri continue, așa că să-l limităm.
+            if current_time - self.last_beep_time > 0.3: # Beep maxim la fiecare 300ms
                 if system_os == "Windows":
-                    # Non-blocking beep not easily possible with winsound.Beep (it blocks).
-                    # Using PlaySound with SND_ASYNC might be better but requires a wav file.
-                    # We will use Beep but keep it short (e.g. 100ms)
+                    # Beep non-blocant nu este ușor posibil cu winsound.Beep (blochează).
+                    # Folosirea PlaySound cu SND_ASYNC ar putea fi mai bună, dar necesită un fișier wav.
+                    # Vom folosi Beep dar îl vom ține scurt (de exemplu 100ms)
                     try:
                         winsound.Beep(1000, 100)
                     except:
@@ -174,17 +175,17 @@ class App(customtkinter.CTk):
                 self.last_beep_time = current_time
 
     def update_ui(self, value):
-        # Schedule update on main thread
+        # Planifică actualizarea pe firul principal
         self.after(0, lambda: self._update_ui_internal(value))
 
     def _update_ui_internal(self, value):
-        # Update Text and Color
+        # Actualizează textul și culoarea
         if value <= self.alert_threshold:
             self.distance_label.configure(text=f"{int(value)} cm", text_color="red")
         else:
-            self.distance_label.configure(text=f"{int(value)} cm", text_color=("black", "white")) # Reset to theme default
+            self.distance_label.configure(text=f"{int(value)} cm", text_color=("black", "white")) # Resetează la modul implicit al temei
         
-        # Update Graph Data
+        # Actualizează datele graficului
         self.data_y.append(value)
         self.draw_graph()
 
@@ -198,18 +199,18 @@ class App(customtkinter.CTk):
         if not self.data_y:
             return
 
-        # Scales
+        # Scări
         max_dist = max(max(self.data_y), 50) * 1.2
         width = self.graph_canvas.winfo_width()
         height = self.graph_canvas.winfo_height()
         
         step_x = width / (self.data_len - 1)
         
-        # Create line coordinates
+        # Creează coordonatele liniei
         coords = []
         for i, val in enumerate(self.data_y):
             x = i * step_x
-            # Invert Y because canvas 0 is top
+            # Inversează Y deoarece 0 pe canvas este sus
             y = height - (val / max_dist * height) 
             coords.append(x)
             coords.append(y)
