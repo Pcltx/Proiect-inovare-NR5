@@ -23,66 +23,75 @@ class App(customtkinter.CTk):
 
         self.title("Dashboard")
         self.alert_threshold = 20 # Prag implicit în cm 
-        self.geometry("900x600")
+        self.geometry("480x320")
+        self.resizable(False, False)
 
-        # Configurare aspect
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(0, weight=1)
+        # Layout: tot pe o singură coloană compactă
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(2, weight=1)  # graficul ia spațiul rămas
 
-        # Cadru bară laterală
-        self.sidebar_frame = customtkinter.CTkFrame(self, width=140, corner_radius=0)
-        self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(4, weight=1)
+        # ── Bara de sus: port + connect ──
+        self.top_bar = customtkinter.CTkFrame(self, height=45, corner_radius=0)
+        self.top_bar.grid(row=0, column=0, sticky="ew")
+        self.top_bar.grid_columnconfigure(1, weight=1)
 
-        self.logo_label = customtkinter.CTkLabel(self.sidebar_frame, text="Sensor", font=customtkinter.CTkFont(size=20, weight="bold"))
-        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
+        self.connect_btn = customtkinter.CTkButton(self.top_bar, text="Connect", width=90, height=38,
+                                                     font=customtkinter.CTkFont(size=13),
+                                                     command=self.toggle_connection)
+        self.connect_btn.grid(row=0, column=0, padx=(6, 4), pady=4)
 
-        # Controale conexiune
-        self.com_port_var = customtkinter.StringVar(value="Selecteaza portul")
-        self.port_menu = customtkinter.CTkOptionMenu(self.sidebar_frame, variable=self.com_port_var, values=self.get_available_ports())
-        self.port_menu.grid(row=1, column=0, padx=20, pady=10)
+        self.com_port_var = customtkinter.StringVar(value="Port")
+        self.port_menu = customtkinter.CTkOptionMenu(self.top_bar, variable=self.com_port_var,
+                                                      values=self.get_available_ports(),
+                                                      height=38, width=140,
+                                                      font=customtkinter.CTkFont(size=12))
+        self.port_menu.grid(row=0, column=1, padx=4, pady=4, sticky="ew")
 
-        self.refresh_btn = customtkinter.CTkButton(self.sidebar_frame, text="Refresh", command=self.refresh_ports)
-        self.refresh_btn.grid(row=2, column=0, padx=20, pady=10)
+        self.refresh_btn = customtkinter.CTkButton(self.top_bar, text="↻", width=42, height=38,
+                                                     font=customtkinter.CTkFont(size=18),
+                                                     command=self.refresh_ports)
+        self.refresh_btn.grid(row=0, column=2, padx=(4, 4), pady=4)
 
-        self.connect_btn = customtkinter.CTkButton(self.sidebar_frame, text="Connect", command=self.toggle_connection)
-        self.connect_btn.grid(row=3, column=0, padx=20, pady=10)
-        
-        self.connect_info = customtkinter.CTkLabel(self.sidebar_frame, text="Status: Disconnected", text_color="gray")
-        self.connect_info.grid(row=4, column=0, padx=20, pady=10, sticky="s")
+        self.connect_info = customtkinter.CTkLabel(self.top_bar, text="●", text_color="gray",
+                                                     font=customtkinter.CTkFont(size=16), width=20)
+        self.connect_info.grid(row=0, column=3, padx=(0, 8), pady=4)
 
-        # Control prag
-        self.threshold_label = customtkinter.CTkLabel(self.sidebar_frame, text=f"Threshold: {self.alert_threshold} cm")
-        self.threshold_label.grid(row=5, column=0, padx=20, pady=(20, 0))
-        
-        self.threshold_slider = customtkinter.CTkSlider(self.sidebar_frame, from_=0, to=100, number_of_steps=100, command=self.update_threshold)
-        self.threshold_slider.set(self.alert_threshold)
-        self.threshold_slider.grid(row=6, column=0, padx=20, pady=(0, 20))
+        # ── Afișare distanță (centru) ──
+        self.distance_label = customtkinter.CTkLabel(self, text="-- cm",
+                                                      font=customtkinter.CTkFont(size=58, weight="bold"))
+        self.distance_label.grid(row=1, column=0, pady=(4, 0))
 
-        # Zona principală de conținut
-        self.main_frame = customtkinter.CTkFrame(self, corner_radius=10)
-        self.main_frame.grid(row=0, column=1, padx=20, pady=20, sticky="nsew")
-        self.main_frame.grid_columnconfigure(0, weight=1)
-        self.main_frame.grid_rowconfigure(2, weight=1)
-
-        # Afișare distanță
-        self.value_frame = customtkinter.CTkFrame(self.main_frame, fg_color="transparent")
-        self.value_frame.grid(row=0, column=0, pady=(20, 0))
-        
-        self.distance_label = customtkinter.CTkLabel(self.value_frame, text="-- cm", font=customtkinter.CTkFont(size=80, weight="bold"))
-        self.distance_label.pack()
-
-
-        # Grafic Canvas
-        self.graph_height = 300
-        self.graph_canvas = tkinter.Canvas(self.main_frame, height=self.graph_height, bg="#2b2b2b", highlightthickness=0)
-        self.graph_canvas.grid(row=2, column=0, padx=20, pady=20, sticky="nsew")
-        
-        # Leagă evenimentul de redimensionare pentru a redesena graficul
+        # ── Grafic Canvas ──
+        self.graph_canvas = tkinter.Canvas(self, bg="#2b2b2b", highlightthickness=0)
+        self.graph_canvas.grid(row=2, column=0, padx=6, pady=(4, 2), sticky="nsew")
         self.graph_canvas.bind("<Configure>", self.on_canvas_resize)
 
+        # ── Bara de jos: threshold ──
+        self.bottom_bar = customtkinter.CTkFrame(self, height=44, corner_radius=0)
+        self.bottom_bar.grid(row=3, column=0, sticky="ew")
+        self.bottom_bar.grid_columnconfigure(1, weight=1)
+
+        self.threshold_minus_btn = customtkinter.CTkButton(self.bottom_bar, text="−", width=48, height=36,
+                                                           font=customtkinter.CTkFont(size=20, weight="bold"),
+                                                           command=lambda: self.adjust_threshold(-1))
+        self.threshold_minus_btn.grid(row=0, column=0, padx=(6, 4), pady=4)
+
+        self.threshold_label = customtkinter.CTkLabel(self.bottom_bar, text=f"Prag: {self.alert_threshold} cm",
+                                                       font=customtkinter.CTkFont(size=13))
+        self.threshold_label.grid(row=0, column=1, padx=2, pady=4)
+
+        self.threshold_slider = customtkinter.CTkSlider(self.bottom_bar, from_=0, to=100, number_of_steps=100,
+                                                        command=self.update_threshold, height=18, width=160)
+        self.threshold_slider.set(self.alert_threshold)
+        self.threshold_slider.grid(row=0, column=2, padx=4, pady=4)
+
+        self.threshold_plus_btn = customtkinter.CTkButton(self.bottom_bar, text="+", width=48, height=36,
+                                                          font=customtkinter.CTkFont(size=20, weight="bold"),
+                                                          command=lambda: self.adjust_threshold(1))
+        self.threshold_plus_btn.grid(row=0, column=3, padx=(4, 6), pady=4)
+
         # Date
-        self.data_len = 100
+        self.data_len = 60  # Fewer data points for small screen
         self.data_y = collections.deque([0] * self.data_len, maxlen=self.data_len)
         self.canvas_width = 100 # Substituent inițial
 
@@ -92,7 +101,6 @@ class App(customtkinter.CTk):
         self.thread = None
         
         # Stare alertă audio
-        self.last_beep_time = 0
         self.last_beep_time = 0
 
     def get_available_ports(self):
@@ -110,32 +118,38 @@ class App(customtkinter.CTk):
 
     def connect(self):
         port = self.com_port_var.get()
-        if port == "Select Port" or port == "No Ports":
+        if port in ("Select Port", "Selecteaza portul", "No Ports"):
             return
 
         try:
-            self.serial_conn = serial.Serial(port, 9600, timeout=1)
+            self.serial_conn = serial.Serial(port, 115200, timeout=1)
             self.is_running = True
             self.connect_btn.configure(text="Disconnect", fg_color="red", hover_color="darkred")
-            self.connect_info.configure(text="Status: Connected", text_color="green")
+            self.connect_info.configure(text="●", text_color="#00d26a")
             
             # Pornește firul de execuție pentru citire
             self.thread = threading.Thread(target=self.read_serial_data, daemon=True)
             self.thread.start()
         except Exception as e:
-            self.connect_info.configure(text=f"Error: {e}", text_color="red")
+            self.connect_info.configure(text="●", text_color="red")
             print(e)
 
     def disconnect(self):
         self.is_running = False
         if self.serial_conn:
             self.serial_conn.close()
-        self.connect_btn.configure(text="Connect", fg_color="#1f538d", hover_color="#14375e") # restabilește albastrul implicit
-        self.connect_info.configure(text="Status: Disconnected", text_color="gray")
+        self.connect_btn.configure(text="Connect", fg_color="#1f538d", hover_color="#14375e")
+        self.connect_info.configure(text="●", text_color="gray")
 
     def update_threshold(self, value):
         self.alert_threshold = int(value)
-        self.threshold_label.configure(text=f"Threshold: {self.alert_threshold} cm")
+        self.threshold_label.configure(text=f"Prag: {self.alert_threshold} cm")
+
+    def adjust_threshold(self, delta):
+        new_val = max(0, min(100, self.alert_threshold + delta))
+        self.alert_threshold = new_val
+        self.threshold_slider.set(new_val)
+        self.threshold_label.configure(text=f"Prag: {self.alert_threshold} cm")
 
     def read_serial_data(self):
         while self.is_running and self.serial_conn and self.serial_conn.is_open:
