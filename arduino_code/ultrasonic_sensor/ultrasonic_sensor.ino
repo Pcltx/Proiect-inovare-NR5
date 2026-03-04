@@ -1,50 +1,65 @@
 /*
-  ESP32-S3-N16R8 - Senzor Ultrasonic HC-SR04
-  
-  Pinout:
-    VCC  = 5V (sau 3.3V dacă senzorul suportă)
-    GND  = GND
-    Trig = GPIO 4
-    Echo = GPIO 5
-
-  Notă: ESP32-S3 are USB nativ (CDC).
-        În Arduino IDE, selectează:
-        - Board: "ESP32S3 Dev Module"
-        - USB CDC On Boot: "Enabled"
+  ESP32-S3 - US-100 Ultrasonic Sensor (Trigger/Echo Mode)
+  Note: Keep the jumper ON at the back of the US-100.
 */
 
-const int trigPin = 4;
-const int echoPin = 5;
+// Updated Pins for ESP32-S3
+const int trigPin = 1;  
+const int echoPin = 2;  
+const int ledPin  = 38; // Most ESP32-S3 DevBoards use GPIO 38 or 48 for the system LED
+
+int previousDistance = 0;
+const int changeThreshold = 5; 
 
 void setup() {
-  Serial.begin(115200);  // Viteză mai mare pe ESP32
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
-
-  // Așteaptă conexiunea USB serial
+  // S3 boards need a delay to initialize USB Serial
+  Serial.begin(115200);
   while (!Serial) {
     delay(10);
   }
-  delay(500);  // Stabilizare la pornire
+
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT); 
+  pinMode(ledPin, OUTPUT);
+  
+  digitalWrite(ledPin, LOW);
+  Serial.println("US-100 Initialized on ESP32-S3...");
 }
 
 void loop() {
-  // Trimite puls trigger
+  // Clear the trigPin
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
+  
+  // Trigger the sensor with a 10us pulse
   digitalWrite(trigPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
 
-  // Citește ecoul
-  long duration = pulseIn(echoPin, HIGH, 30000);  // Timeout 30ms (~5m max)
+  // Read the echoPin (returns travel time in microseconds)
+  // US-100 works perfectly at 3.3V, so no voltage divider is needed
+  long duration = pulseIn(echoPin, HIGH, 30000); 
 
-  // Calculează distanța în cm
+  // Calculate distance: (time * speed of sound) / 2
   int distance = duration * 0.0343 / 2;
 
-  if (distance > 0 && distance < 400) {
-    Serial.println(distance);
+  // Filter out 0 (timeout) or out of range readings
+  if (distance > 2 && distance < 450) {
+    
+    // Only print if there is a significant change to avoid Serial spam
+    if (abs(distance - previousDistance) >= changeThreshold) {
+      Serial.print("Distance changed: ");
+      Serial.print(distance);
+      Serial.println(" cm");
+
+      // Visual feedback
+      digitalWrite(ledPin, HIGH);
+      delay(50);
+      digitalWrite(ledPin, LOW);
+      
+      previousDistance = distance;
+    }
   }
 
-  delay(50);
+  delay(60); // Small delay between pings
 }

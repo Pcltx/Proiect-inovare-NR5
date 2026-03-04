@@ -156,12 +156,23 @@ class App(customtkinter.CTk):
             try:
                 line = self.serial_conn.readline().decode('utf-8').strip()
                 if line:
-                    try:
-                        val = float(line)
+                    val = None
+                    # Parse "Distance changed: X cm" format from ESP
+                    if "Distance changed:" in line:
+                        try:
+                            val = float(line.split(":")[1].replace("cm", "").strip())
+                        except (ValueError, IndexError):
+                            pass
+                    else:
+                        # Fallback: try parsing as raw number
+                        try:
+                            val = float(line)
+                        except ValueError:
+                            pass
+
+                    if val is not None:
                         self.check_alert(val)
                         self.update_ui(val)
-                    except ValueError:
-                        pass 
 
             except Exception as e:
                 print(f"Read Error: {e}")
