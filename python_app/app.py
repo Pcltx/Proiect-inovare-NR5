@@ -23,75 +23,91 @@ class App(customtkinter.CTk):
 
         self.title("Dashboard")
         self.alert_threshold = 20 # Prag implicit în cm 
-        self.geometry("480x320")
+        self.geometry("320x480")
         self.resizable(False, False)
 
         # Layout: tot pe o singură coloană compactă
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(2, weight=1)  # graficul ia spațiul rămas
 
-        # ── Bara de sus: port + connect ──
-        self.top_bar = customtkinter.CTkFrame(self, height=45, corner_radius=0)
+        # ── Bara de sus: port + connect (stacked for portrait) ──
+        self.top_bar = customtkinter.CTkFrame(self, corner_radius=0)
         self.top_bar.grid(row=0, column=0, sticky="ew")
-        self.top_bar.grid_columnconfigure(1, weight=1)
+        self.top_bar.grid_columnconfigure(0, weight=1)
 
-        self.connect_btn = customtkinter.CTkButton(self.top_bar, text="Connect", width=90, height=38,
-                                                     font=customtkinter.CTkFont(size=13),
+        # Row 0: Connect button + status indicator
+        self.top_row = customtkinter.CTkFrame(self.top_bar, fg_color="transparent")
+        self.top_row.grid(row=0, column=0, sticky="ew")
+        self.top_row.grid_columnconfigure(0, weight=1)
+
+        self.connect_btn = customtkinter.CTkButton(self.top_row, text="Connect", height=40,
+                                                     font=customtkinter.CTkFont(size=14),
                                                      command=self.toggle_connection)
-        self.connect_btn.grid(row=0, column=0, padx=(6, 4), pady=4)
+        self.connect_btn.grid(row=0, column=0, padx=(6, 4), pady=(6, 2), sticky="ew")
+
+        self.connect_info = customtkinter.CTkLabel(self.top_row, text="●", text_color="gray",
+                                                     font=customtkinter.CTkFont(size=18), width=28)
+        self.connect_info.grid(row=0, column=1, padx=(0, 8), pady=(6, 2))
+
+        # Row 1: Port dropdown + refresh
+        self.port_row = customtkinter.CTkFrame(self.top_bar, fg_color="transparent")
+        self.port_row.grid(row=1, column=0, sticky="ew")
+        self.port_row.grid_columnconfigure(0, weight=1)
 
         self.com_port_var = customtkinter.StringVar(value="Port")
-        self.port_menu = customtkinter.CTkOptionMenu(self.top_bar, variable=self.com_port_var,
+        self.port_menu = customtkinter.CTkOptionMenu(self.port_row, variable=self.com_port_var,
                                                       values=self.get_available_ports(),
-                                                      height=38, width=140,
-                                                      font=customtkinter.CTkFont(size=12))
-        self.port_menu.grid(row=0, column=1, padx=4, pady=4, sticky="ew")
+                                                      height=40,
+                                                      font=customtkinter.CTkFont(size=13))
+        self.port_menu.grid(row=0, column=0, padx=(6, 4), pady=(2, 6), sticky="ew")
 
-        self.refresh_btn = customtkinter.CTkButton(self.top_bar, text="↻", width=42, height=38,
-                                                     font=customtkinter.CTkFont(size=18),
+        self.refresh_btn = customtkinter.CTkButton(self.port_row, text="↻", width=46, height=40,
+                                                     font=customtkinter.CTkFont(size=20),
                                                      command=self.refresh_ports)
-        self.refresh_btn.grid(row=0, column=2, padx=(4, 4), pady=4)
-
-        self.connect_info = customtkinter.CTkLabel(self.top_bar, text="●", text_color="gray",
-                                                     font=customtkinter.CTkFont(size=16), width=20)
-        self.connect_info.grid(row=0, column=3, padx=(0, 8), pady=4)
+        self.refresh_btn.grid(row=0, column=1, padx=(4, 6), pady=(2, 6))
 
         # ── Afișare distanță (centru) ──
         self.distance_label = customtkinter.CTkLabel(self, text="-- cm",
-                                                      font=customtkinter.CTkFont(size=58, weight="bold"))
-        self.distance_label.grid(row=1, column=0, pady=(4, 0))
+                                                      font=customtkinter.CTkFont(size=64, weight="bold"))
+        self.distance_label.grid(row=1, column=0, pady=(10, 4))
 
         # ── Grafic Canvas ──
         self.graph_canvas = tkinter.Canvas(self, bg="#2b2b2b", highlightthickness=0)
         self.graph_canvas.grid(row=2, column=0, padx=6, pady=(4, 2), sticky="nsew")
         self.graph_canvas.bind("<Configure>", self.on_canvas_resize)
 
-        # ── Bara de jos: threshold ──
-        self.bottom_bar = customtkinter.CTkFrame(self, height=44, corner_radius=0)
+        # ── Bara de jos: threshold (stacked for portrait) ──
+        self.bottom_bar = customtkinter.CTkFrame(self, corner_radius=0)
         self.bottom_bar.grid(row=3, column=0, sticky="ew")
-        self.bottom_bar.grid_columnconfigure(1, weight=1)
+        self.bottom_bar.grid_columnconfigure(0, weight=1)
 
-        self.threshold_minus_btn = customtkinter.CTkButton(self.bottom_bar, text="−", width=48, height=36,
-                                                           font=customtkinter.CTkFont(size=20, weight="bold"),
-                                                           command=lambda: self.adjust_threshold(-1))
-        self.threshold_minus_btn.grid(row=0, column=0, padx=(6, 4), pady=4)
-
+        # Row 0: Label
         self.threshold_label = customtkinter.CTkLabel(self.bottom_bar, text=f"Prag: {self.alert_threshold} cm",
-                                                       font=customtkinter.CTkFont(size=13))
-        self.threshold_label.grid(row=0, column=1, padx=2, pady=4)
+                                                       font=customtkinter.CTkFont(size=14))
+        self.threshold_label.grid(row=0, column=0, padx=6, pady=(6, 2))
 
-        self.threshold_slider = customtkinter.CTkSlider(self.bottom_bar, from_=0, to=100, number_of_steps=100,
-                                                        command=self.update_threshold, height=18, width=160)
+        # Row 1: − slider +
+        self.threshold_controls = customtkinter.CTkFrame(self.bottom_bar, fg_color="transparent")
+        self.threshold_controls.grid(row=1, column=0, sticky="ew")
+        self.threshold_controls.grid_columnconfigure(1, weight=1)
+
+        self.threshold_minus_btn = customtkinter.CTkButton(self.threshold_controls, text="−", width=50, height=40,
+                                                           font=customtkinter.CTkFont(size=22, weight="bold"),
+                                                           command=lambda: self.adjust_threshold(-1))
+        self.threshold_minus_btn.grid(row=0, column=0, padx=(6, 4), pady=(2, 6))
+
+        self.threshold_slider = customtkinter.CTkSlider(self.threshold_controls, from_=0, to=100, number_of_steps=100,
+                                                        command=self.update_threshold, height=20)
         self.threshold_slider.set(self.alert_threshold)
-        self.threshold_slider.grid(row=0, column=2, padx=4, pady=4)
+        self.threshold_slider.grid(row=0, column=1, padx=4, pady=(2, 6), sticky="ew")
 
-        self.threshold_plus_btn = customtkinter.CTkButton(self.bottom_bar, text="+", width=48, height=36,
-                                                          font=customtkinter.CTkFont(size=20, weight="bold"),
+        self.threshold_plus_btn = customtkinter.CTkButton(self.threshold_controls, text="+", width=50, height=40,
+                                                          font=customtkinter.CTkFont(size=22, weight="bold"),
                                                           command=lambda: self.adjust_threshold(1))
-        self.threshold_plus_btn.grid(row=0, column=3, padx=(4, 6), pady=4)
+        self.threshold_plus_btn.grid(row=0, column=3, padx=(4, 6), pady=(2, 6))
 
         # Date
-        self.data_len = 60  # Fewer data points for small screen
+        self.data_len = 40  # Fewer data points for narrow portrait screen
         self.data_y = collections.deque([0] * self.data_len, maxlen=self.data_len)
         self.canvas_width = 100 # Substituent inițial
 
