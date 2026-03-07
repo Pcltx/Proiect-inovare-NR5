@@ -23,8 +23,12 @@ class App(customtkinter.CTk):# clasa penrtu interfata
 
         self.title("Dashboard")
         self.alert_threshold = 20 # Prag implicit în cm 
-        self.geometry("320x480")
-        self.resizable(False, False)
+        # Rulare în full screen (fără bara de instrumente/titlu) pentru ecranul de 3.5 inch
+        self.geometry("480x640+0+0")
+        self.attributes("-fullscreen", True)
+        
+        # Deoarece butonul de închidere al ferestrei va dispărea, adăugăm posibilitatea de a ieși cu tasta Escape
+        self.bind("<Escape>", lambda e: self.on_closing())
 
         # Layout: tot pe o singură coloană compactă
         self.grid_columnconfigure(0, weight=1)
