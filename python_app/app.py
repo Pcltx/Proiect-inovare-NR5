@@ -4,7 +4,7 @@ import serial
 import serial.tools.list_ports
 import threading
 import collections
-import os
+import time
 
 # Configurează aspectul aplicatiei 
 customtkinter.set_appearance_mode("Dark")
@@ -27,47 +27,21 @@ class App(customtkinter.CTk):# clasa penrtu interfata
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(2, weight=1)  # graficul ia spațiul rămas
 
-        # ── Bara de sus: port + connect (stacked for portrait) ──
+        # ── Bara de sus: stare conexiune + buton ieșire ──
         self.top_bar = customtkinter.CTkFrame(self, corner_radius=0)
         self.top_bar.grid(row=0, column=0, sticky="ew")
         self.top_bar.grid_columnconfigure(0, weight=1)
 
-        # Row 0: butonul de conectare si statrea de conexiune 
-        self.top_row = customtkinter.CTkFrame(self.top_bar, fg_color="transparent")
-        self.top_row.grid(row=0, column=0, sticky="ew")
-        self.top_row.grid_columnconfigure(0, weight=1)
+        self.status_label = customtkinter.CTkLabel(self.top_bar, text="⏳ Se caută senzorul...",
+                                                    font=customtkinter.CTkFont(size=14),
+                                                    text_color="gray")
+        self.status_label.grid(row=0, column=0, padx=(10, 4), pady=8, sticky="w")
 
-        self.connect_btn = customtkinter.CTkButton(self.top_row, text="Connect", height=40,
-                                                     font=customtkinter.CTkFont(size=14),
-                                                     command=self.toggle_connection)
-        self.connect_btn.grid(row=0, column=0, padx=(6, 4), pady=(6, 2), sticky="ew")
-
-        self.connect_info = customtkinter.CTkLabel(self.top_row, text="●", text_color="gray",
-                                                     font=customtkinter.CTkFont(size=18), width=28)
-        self.connect_info.grid(row=0, column=1, padx=(0, 4), pady=(6, 2))
-
-        self.exit_btn = customtkinter.CTkButton(self.top_row, text="✕", width=40, height=40,
+        self.exit_btn = customtkinter.CTkButton(self.top_bar, text="✕", width=40, height=40,
                                                  font=customtkinter.CTkFont(size=18, weight="bold"),
                                                  fg_color="#c0392b", hover_color="#e74c3c",
                                                  command=self.on_closing)
-        self.exit_btn.grid(row=0, column=2, padx=(0, 6), pady=(6, 2))
-
-        # Row 1
-        self.port_row = customtkinter.CTkFrame(self.top_bar, fg_color="transparent")
-        self.port_row.grid(row=1, column=0, sticky="ew")
-        self.port_row.grid_columnconfigure(0, weight=1)
-
-        self.com_port_var = customtkinter.StringVar(value="Port")
-        self.port_menu = customtkinter.CTkOptionMenu(self.port_row, variable=self.com_port_var,
-                                                      values=self.get_available_ports(),
-                                                      height=40,
-                                                      font=customtkinter.CTkFont(size=13))
-        self.port_menu.grid(row=0, column=0, padx=(6, 4), pady=(2, 6), sticky="ew")
-
-        self.refresh_btn = customtkinter.CTkButton(self.port_row, text="↻", width=46, height=40,
-                                                     font=customtkinter.CTkFont(size=20),
-                                                     command=self.refresh_ports)
-        self.refresh_btn.grid(row=0, column=1, padx=(4, 6), pady=(2, 6))
+        self.exit_btn.grid(row=0, column=1, padx=(0, 6), pady=8)
 
         # ── Afișare distanța
         self.distance_label = customtkinter.CTkLabel(self, text="-- cm",
@@ -116,47 +90,48 @@ class App(customtkinter.CTk):# clasa penrtu interfata
 
         # Variabile seriale
         self.serial_conn = None
-        self.is_running = False
-        self.thread = None
+        self.is_running = True
+        self.scan_thread = None
 
+        # Pornește scanarea automată
+        self.start_auto_scan()
 
-    def get_available_ports(self):
-        ports = serial.tools.list_ports.comports()
-        return [port.device for port in ports] if ports else ["No Ports"]
+    def start_auto_scan(self):
+        """Pornește scanarea automată a porturilor seriale."""
+        self.scan_thread = threading.Thread(target=self.auto_scan_and_connect, daemon=True)
+        self.scan_thread.start()
 
-    def refresh_ports(self):
-        self.port_menu.configure(values=self.get_available_ports())
-
-    def toggle_connection(self):
-        if self.serial_conn and self.serial_conn.is_open:
-            self.disconnect()
-        else:
-            self.connect()
-
-    def connect(self):
-        port = self.com_port_var.get()
-        if port in ("Select Port", "Selecteaza portul", "No Ports"):
-            return
-
-        try:
-            self.serial_conn = serial.Serial(port, 115200, timeout=1)
-            self.is_running = True
-            self.connect_btn.configure(text="Disconnect", fg_color="red", hover_color="darkred")
-            self.connect_info.configure(text="●", text_color="#00d26a")
-            
-            # Pornește firul de execuție pentru citire
-            self.thread = threading.Thread(target=self.read_serial_data, daemon=True)
-            self.thread.start()
-        except Exception as e:
-            self.connect_info.configure(text="●", text_color="red")
-            print(e)
+    def auto_scan_and_connect(self):
+        """Scanează toate porturile seriale și se conectează automat."""
+        while self.is_running:
+            ports = serial.tools.list_ports.comports()
+            for port in ports:
+                if not self.is_running:
+                    return
+                try:
+                    self.serial_conn = serial.Serial(port.device, 115200, timeout=1)
+                    # Actualizează interfața - conectat
+                    self.after(0, lambda p=port.device: self.status_label.configure(
+                        text=f"● Conectat: {p}", text_color="#00d26a"))
+                    # Citește datele
+                    self.read_serial_data()
+                    # Dacă ajungem aici, conexiunea s-a pierdut
+                    self.after(0, lambda: self.status_label.configure(
+                        text="⏳ Reconectare...", text_color="orange"))
+                except Exception:
+                    continue
+            # Niciun port găsit sau toate au eșuat, reîncearcă
+            self.after(0, lambda: self.status_label.configure(
+                text="⏳ Se caută senzorul...", text_color="gray"))
+            time.sleep(2)
 
     def disconnect(self):
         self.is_running = False
         if self.serial_conn:
-            self.serial_conn.close()
-        self.connect_btn.configure(text="Connect", fg_color="#1f538d", hover_color="#14375e")
-        self.connect_info.configure(text="●", text_color="gray")
+            try:
+                self.serial_conn.close()
+            except Exception:
+                pass
 
     def update_threshold(self, value):
         self.alert_threshold = int(value)
