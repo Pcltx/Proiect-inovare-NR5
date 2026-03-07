@@ -5,10 +5,12 @@ import serial.tools.list_ports
 import threading
 import collections
 import time
+import os
+from PIL import Image, ImageTk
 
 # Configurează aspectul aplicatiei 
-customtkinter.set_appearance_mode("Dark")
-customtkinter.set_default_color_theme("blue")
+customtkinter.set_appearance_mode("Light")
+customtkinter.set_default_color_theme("green")
 
 class App(customtkinter.CTk):# clasa penrtu interfata 
     def __init__(self):
@@ -28,39 +30,41 @@ class App(customtkinter.CTk):# clasa penrtu interfata
         self.grid_rowconfigure(2, weight=1)  # graficul ia spațiul rămas
 
         # ── Bara de sus: stare conexiune + buton ieșire ──
-        self.top_bar = customtkinter.CTkFrame(self, corner_radius=0)
+        self.top_bar = customtkinter.CTkFrame(self, corner_radius=0, fg_color="#2e7d32")
         self.top_bar.grid(row=0, column=0, sticky="ew")
         self.top_bar.grid_columnconfigure(0, weight=1)
 
         self.status_label = customtkinter.CTkLabel(self.top_bar, text="⏳ Se caută senzorul...",
                                                     font=customtkinter.CTkFont(size=14),
-                                                    text_color="gray")
+                                                    text_color="white")
         self.status_label.grid(row=0, column=0, padx=(10, 4), pady=8, sticky="w")
 
         self.exit_btn = customtkinter.CTkButton(self.top_bar, text="✕", width=40, height=40,
                                                  font=customtkinter.CTkFont(size=18, weight="bold"),
-                                                 fg_color="#c0392b", hover_color="#e74c3c",
+                                                 fg_color="#c62828", hover_color="#e53935",
                                                  command=self.on_closing)
         self.exit_btn.grid(row=0, column=1, padx=(0, 6), pady=8)
 
         # ── Afișare distanța
         self.distance_label = customtkinter.CTkLabel(self, text="-- cm",
-                                                      font=customtkinter.CTkFont(size=64, weight="bold"))
+                                                      font=customtkinter.CTkFont(size=64, weight="bold"),
+                                                      text_color="#1b5e20")
         self.distance_label.grid(row=1, column=0, pady=(10, 4))
 
         # ── Grafic Canvas ──
-        self.graph_canvas = tkinter.Canvas(self, bg="#2b2b2b", highlightthickness=0)
+        self.graph_canvas = tkinter.Canvas(self, bg="#f5f5f5", highlightthickness=0)
         self.graph_canvas.grid(row=2, column=0, padx=6, pady=(4, 2), sticky="nsew")
         self.graph_canvas.bind("<Configure>", self.on_canvas_resize)
 
         # ── Bara de jos
-        self.bottom_bar = customtkinter.CTkFrame(self, corner_radius=0)
+        self.bottom_bar = customtkinter.CTkFrame(self, corner_radius=0, fg_color="#e8f5e9")
         self.bottom_bar.grid(row=3, column=0, sticky="ew")
         self.bottom_bar.grid_columnconfigure(0, weight=1)
 
         # Row 0
         self.threshold_label = customtkinter.CTkLabel(self.bottom_bar, text=f"Prag: {self.alert_threshold} cm",
-                                                       font=customtkinter.CTkFont(size=14))
+                                                       font=customtkinter.CTkFont(size=14),
+                                                       text_color="#1b5e20")
         self.threshold_label.grid(row=0, column=0, padx=6, pady=(6, 2))
 
         # Row 1
@@ -88,6 +92,13 @@ class App(customtkinter.CTk):# clasa penrtu interfata
         self.data_y = collections.deque([0] * self.data_len, maxlen=self.data_len)
         self.canvas_width = 100 # Substituent inițial
 
+        # Încarcarea imaginii de fundal
+        self.bg_image = None
+        self.bg_photo = None
+        bg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "background.png")
+        if os.path.exists(bg_path):
+            self.bg_image = Image.open(bg_path)
+
         # Variabile seriale
         self.serial_conn = None
         self.is_running = True
@@ -112,17 +123,17 @@ class App(customtkinter.CTk):# clasa penrtu interfata
                     self.serial_conn = serial.Serial(port.device, 115200, timeout=1)
                     # Actualizează interfața - conectat
                     self.after(0, lambda p=port.device: self.status_label.configure(
-                        text=f"● Conectat: {p}", text_color="#00d26a"))
+                        text=f"● Conectat: {p}", text_color="#c8e6c9"))
                     # Citește datele
                     self.read_serial_data()
                     # Dacă ajungem aici, conexiunea s-a pierdut
                     self.after(0, lambda: self.status_label.configure(
-                        text="⏳ Reconectare...", text_color="orange"))
+                        text="⏳ Reconectare...", text_color="#ffcc80"))
                 except Exception:
                     continue
             # Niciun port găsit sau toate au eșuat, reîncearcă
             self.after(0, lambda: self.status_label.configure(
-                text="⏳ Se caută senzorul...", text_color="gray"))
+                text="⏳ Se caută senzorul...", text_color="white"))
             time.sleep(2)
 
     def disconnect(self):
@@ -178,9 +189,9 @@ class App(customtkinter.CTk):# clasa penrtu interfata
     def _update_ui_internal(self, value):
         # Actualizează textul și culoarea
         if value <= self.alert_threshold:
-            self.distance_label.configure(text=f"{int(value)} cm", text_color="red")
+            self.distance_label.configure(text=f"{int(value)} cm", text_color="#c62828")
         else:
-            self.distance_label.configure(text=f"{int(value)} cm", text_color=("black", "white")) # Resetează la modul implicit al temei
+            self.distance_label.configure(text=f"{int(value)} cm", text_color="#1b5e20")
         
         # Actualizează datele graficului
         self.data_y.append(value)
@@ -188,19 +199,44 @@ class App(customtkinter.CTk):# clasa penrtu interfata
 
     def on_canvas_resize(self, event):
         self.canvas_width = event.width
+        self._resize_bg(event.width, event.height)
         self.draw_graph()
+
+    def _resize_bg(self, w, h):
+        """Redimensionează imaginea de fundal pentru a se potrivi cu canvas-ul."""
+        if self.bg_image and w > 1 and h > 1:
+            # Păstrează proporțiile și centrează
+            img = self.bg_image.copy()
+            img_ratio = img.width / img.height
+            canvas_ratio = w / h
+            if img_ratio > canvas_ratio:
+                new_h = h
+                new_w = int(h * img_ratio)
+            else:
+                new_w = w
+                new_h = int(w / img_ratio)
+            img = img.resize((new_w, new_h), Image.LANCZOS)
+            # Crop la centru
+            left = (new_w - w) // 2
+            top = (new_h - h) // 2
+            img = img.crop((left, top, left + w, top + h))
+            self.bg_photo = ImageTk.PhotoImage(img)
 
     def draw_graph(self):
         self.graph_canvas.delete("all")
-        
+
+        width = self.graph_canvas.winfo_width()
+        height = self.graph_canvas.winfo_height()
+
+        # Desenează imaginea de fundal
+        if self.bg_photo:
+            self.graph_canvas.create_image(width // 2, height // 2, image=self.bg_photo)
+
         if not self.data_y:
             return
 
         # Scări
         max_dist = max(max(self.data_y), 50) * 1.2
-        width = self.graph_canvas.winfo_width()
-        height = self.graph_canvas.winfo_height()
-        
         step_x = width / (self.data_len - 1)
         
         # Creează coordonatele liniei
@@ -213,7 +249,7 @@ class App(customtkinter.CTk):# clasa penrtu interfata
             coords.append(y)
         
         if len(coords) >= 4:
-            self.graph_canvas.create_line(coords, fill="#3B8ED0", width=2, smooth=True)
+            self.graph_canvas.create_line(coords, fill="#2e7d32", width=2, smooth=True)
 
     def on_closing(self):
         self.disconnect()
