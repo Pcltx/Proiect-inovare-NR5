@@ -9,7 +9,7 @@ import os
 from PIL import Image, ImageTk
 
 # Configurează aspectul aplicatiei 
-customtkinter.set_appearance_mode("Light")
+customtkinter.set_appearance_mode("Dark")
 customtkinter.set_default_color_theme("green")
 
 class App(customtkinter.CTk):# clasa penrtu interfata 
@@ -48,23 +48,23 @@ class App(customtkinter.CTk):# clasa penrtu interfata
         # ── Afișare distanța
         self.distance_label = customtkinter.CTkLabel(self, text="-- cm",
                                                       font=customtkinter.CTkFont(size=64, weight="bold"),
-                                                      text_color="#1b5e20")
+                                                      text_color="#4caf50")
         self.distance_label.grid(row=1, column=0, pady=(10, 4))
 
         # ── Grafic Canvas ──
-        self.graph_canvas = tkinter.Canvas(self, bg="#f5f5f5", highlightthickness=0)
+        self.graph_canvas = tkinter.Canvas(self, bg="#1a1a1a", highlightthickness=0)
         self.graph_canvas.grid(row=2, column=0, padx=6, pady=(4, 2), sticky="nsew")
         self.graph_canvas.bind("<Configure>", self.on_canvas_resize)
 
         # ── Bara de jos
-        self.bottom_bar = customtkinter.CTkFrame(self, corner_radius=0, fg_color="#e8f5e9")
+        self.bottom_bar = customtkinter.CTkFrame(self, corner_radius=0, fg_color="#1b3d1e")
         self.bottom_bar.grid(row=3, column=0, sticky="ew")
         self.bottom_bar.grid_columnconfigure(0, weight=1)
 
         # Row 0
         self.threshold_label = customtkinter.CTkLabel(self.bottom_bar, text=f"Prag: {self.alert_threshold} cm",
                                                        font=customtkinter.CTkFont(size=14),
-                                                       text_color="#1b5e20")
+                                                       text_color="#81c784")
         self.threshold_label.grid(row=0, column=0, padx=6, pady=(6, 2))
 
         # Row 1
@@ -189,9 +189,9 @@ class App(customtkinter.CTk):# clasa penrtu interfata
     def _update_ui_internal(self, value):
         # Actualizează textul și culoarea
         if value <= self.alert_threshold:
-            self.distance_label.configure(text=f"{int(value)} cm", text_color="#c62828")
+            self.distance_label.configure(text=f"{int(value)} cm", text_color="#ef5350")
         else:
-            self.distance_label.configure(text=f"{int(value)} cm", text_color="#1b5e20")
+            self.distance_label.configure(text=f"{int(value)} cm", text_color="#4caf50")
         
         # Actualizează datele graficului
         self.data_y.append(value)
@@ -203,23 +203,20 @@ class App(customtkinter.CTk):# clasa penrtu interfata
         self.draw_graph()
 
     def _resize_bg(self, w, h):
-        """Redimensionează imaginea de fundal pentru a se potrivi cu canvas-ul."""
+        """Redimensionează imaginea de fundal la 4:3 centrat pe canvas."""
         if self.bg_image and w > 1 and h > 1:
-            # Păstrează proporțiile și centrează
-            img = self.bg_image.copy()
-            img_ratio = img.width / img.height
+            # Calculează dimensiunea 4:3 care încape în canvas
+            target_ratio = 4 / 3
             canvas_ratio = w / h
-            if img_ratio > canvas_ratio:
+            if canvas_ratio > target_ratio:
+                # Canvas mai lat decât 4:3 — limitează după înălțime
                 new_h = h
-                new_w = int(h * img_ratio)
+                new_w = int(h * target_ratio)
             else:
+                # Canvas mai înalt decât 4:3 — limitează după lățime
                 new_w = w
-                new_h = int(w / img_ratio)
-            img = img.resize((new_w, new_h), Image.LANCZOS)
-            # Crop la centru
-            left = (new_w - w) // 2
-            top = (new_h - h) // 2
-            img = img.crop((left, top, left + w, top + h))
+                new_h = int(w / target_ratio)
+            img = self.bg_image.resize((new_w, new_h), Image.LANCZOS)
             self.bg_photo = ImageTk.PhotoImage(img)
 
     def draw_graph(self):
@@ -249,7 +246,7 @@ class App(customtkinter.CTk):# clasa penrtu interfata
             coords.append(y)
         
         if len(coords) >= 4:
-            self.graph_canvas.create_line(coords, fill="#2e7d32", width=2, smooth=True)
+            self.graph_canvas.create_line(coords, fill="#66bb6a", width=2, smooth=True)
 
     def on_closing(self):
         self.disconnect()
