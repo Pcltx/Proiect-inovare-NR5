@@ -232,28 +232,21 @@ class App(customtkinter.CTk):# clasa penrtu interfata
         if not self.data_y:
             return
 
-      
-        margin = 10 
+        # Scări
+        max_dist = max(max(self.data_y), 50) * 1.2
         step_x = width / (self.data_len - 1)
         
-       
+        # Creează coordonatele liniei
         coords = []
         for i, val in enumerate(self.data_y):
             x = i * step_x
-            if val >= self.alert_threshold:
-                # Linie plată la partea de sus
-                y = margin
-            else:
-                # Coboară proporțional: 0 cm = jos de tot, prag = sus
-                ratio = val / self.alert_threshold  # 0..1
-                y = margin + (1 - ratio) * (height - 2 * margin)
+            # Inversează Y deoarece 0 pe canvas este sus
+            y = height - (val / max_dist * height) 
             coords.append(x)
             coords.append(y)
         
         if len(coords) >= 4:
-            self.graph_canvas.create_line(coords, fill="#ef5350", width=3, smooth=True)
-            # Desenează linia de prag (linie plată de referință)
-            self.graph_canvas.create_line(0, margin, width, margin, fill="#4caf50", width=1, dash=(4, 4))
+            self.graph_canvas.create_line(coords, fill="black", width=2, smooth=True)
 
     def on_closing(self):
         self.disconnect()
