@@ -8,9 +8,6 @@ const int trigPin = 1;
 const int echoPin = 2;  
 const int ledPin  = 38; // Most ESP32-S3 DevBoards use GPIO 38 or 48 for the system LED
 
-int previousDistance = 0;
-const int changeThreshold = 5; 
-
 void setup() {
   // S3 boards need a delay to initialize USB Serial
   Serial.begin(115200);
@@ -45,9 +42,6 @@ void loop() {
 
   // Filter out 0 (timeout) or out of range readings
   if (distance > 2 && distance < 450) {
-    
-    // Only print if there is a significant change to avoid Serial spam
-    if (abs(distance - previousDistance) >= changeThreshold) {
       Serial.print("Distance changed: ");
       Serial.print(distance);
       Serial.println(" cm");
@@ -56,9 +50,6 @@ void loop() {
       digitalWrite(ledPin, HIGH);
       delay(50);
       digitalWrite(ledPin, LOW);
-      
-      previousDistance = distance;
-    }
   }
 
   delay(60); // Small delay between pings
