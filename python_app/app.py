@@ -17,7 +17,7 @@ if system_os == "Windows":
 customtkinter.set_appearance_mode("Dark")
 customtkinter.set_default_color_theme("blue")
 
-class App(customtkinter.CTk):
+class App(customtkinter.CTk):# clasa penrtu interfata 
     def __init__(self):
         super().__init__()
 
@@ -47,7 +47,13 @@ class App(customtkinter.CTk):
 
         self.connect_info = customtkinter.CTkLabel(self.top_row, text="●", text_color="gray",
                                                      font=customtkinter.CTkFont(size=18), width=28)
-        self.connect_info.grid(row=0, column=1, padx=(0, 8), pady=(6, 2))
+        self.connect_info.grid(row=0, column=1, padx=(0, 4), pady=(6, 2))
+
+        self.exit_btn = customtkinter.CTkButton(self.top_row, text="✕", width=40, height=40,
+                                                 font=customtkinter.CTkFont(size=18, weight="bold"),
+                                                 fg_color="#c0392b", hover_color="#e74c3c",
+                                                 command=self.on_closing)
+        self.exit_btn.grid(row=0, column=2, padx=(0, 6), pady=(6, 2))
 
         # Row 1: Port dropdown + refresh
         self.port_row = customtkinter.CTkFrame(self.top_bar, fg_color="transparent")
