@@ -1,3 +1,11 @@
 customtkinter
 pyserial
 
+# Standard Libraries (Built-in with Python, do not install via pip)
+# tkinter
+# threading
+# collections
+# platform
+# os
+# time
+# winsound (Windows only)
