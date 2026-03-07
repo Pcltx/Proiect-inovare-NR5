@@ -4,14 +4,7 @@ import serial
 import serial.tools.list_ports
 import threading
 import collections
-import platform
 import os
-import time
-
-# Verifică sistemul de operare pentru sunet
-system_os = platform.system()
-if system_os == "Windows":
-    import winsound
 
 # Configurează aspectul aplicatiei 
 customtkinter.set_appearance_mode("Dark")
@@ -39,7 +32,7 @@ class App(customtkinter.CTk):# clasa penrtu interfata
         self.top_bar.grid(row=0, column=0, sticky="ew")
         self.top_bar.grid_columnconfigure(0, weight=1)
 
-        # Row 0: Connect button + status indicator
+        # Row 0: butonul de conectare si statrea de conexiune 
         self.top_row = customtkinter.CTkFrame(self.top_bar, fg_color="transparent")
         self.top_row.grid(row=0, column=0, sticky="ew")
         self.top_row.grid_columnconfigure(0, weight=1)
@@ -59,7 +52,7 @@ class App(customtkinter.CTk):# clasa penrtu interfata
                                                  command=self.on_closing)
         self.exit_btn.grid(row=0, column=2, padx=(0, 6), pady=(6, 2))
 
-        # Row 1: Port dropdown + refresh
+        # Row 1
         self.port_row = customtkinter.CTkFrame(self.top_bar, fg_color="transparent")
         self.port_row.grid(row=1, column=0, sticky="ew")
         self.port_row.grid_columnconfigure(0, weight=1)
@@ -76,7 +69,7 @@ class App(customtkinter.CTk):# clasa penrtu interfata
                                                      command=self.refresh_ports)
         self.refresh_btn.grid(row=0, column=1, padx=(4, 6), pady=(2, 6))
 
-        # ── Afișare distanță (centru) ──
+        # ── Afișare distanța
         self.distance_label = customtkinter.CTkLabel(self, text="-- cm",
                                                       font=customtkinter.CTkFont(size=64, weight="bold"))
         self.distance_label.grid(row=1, column=0, pady=(10, 4))
@@ -86,17 +79,17 @@ class App(customtkinter.CTk):# clasa penrtu interfata
         self.graph_canvas.grid(row=2, column=0, padx=6, pady=(4, 2), sticky="nsew")
         self.graph_canvas.bind("<Configure>", self.on_canvas_resize)
 
-        # ── Bara de jos: threshold (stacked for portrait) ──
+        # ── Bara de jos
         self.bottom_bar = customtkinter.CTkFrame(self, corner_radius=0)
         self.bottom_bar.grid(row=3, column=0, sticky="ew")
         self.bottom_bar.grid_columnconfigure(0, weight=1)
 
-        # Row 0: Label
+        # Row 0
         self.threshold_label = customtkinter.CTkLabel(self.bottom_bar, text=f"Prag: {self.alert_threshold} cm",
                                                        font=customtkinter.CTkFont(size=14))
         self.threshold_label.grid(row=0, column=0, padx=6, pady=(6, 2))
 
-        # Row 1: − slider +
+        # Row 1
         self.threshold_controls = customtkinter.CTkFrame(self.bottom_bar, fg_color="transparent")
         self.threshold_controls.grid(row=1, column=0, sticky="ew")
         self.threshold_controls.grid_columnconfigure(1, weight=1)
@@ -125,9 +118,7 @@ class App(customtkinter.CTk):# clasa penrtu interfata
         self.serial_conn = None
         self.is_running = False
         self.thread = None
-        
-        # Stare alertă audio
-        self.last_beep_time = 0
+
 
     def get_available_ports(self):
         ports = serial.tools.list_ports.comports()
@@ -197,33 +188,13 @@ class App(customtkinter.CTk):# clasa penrtu interfata
                             pass
 
                     if val is not None:
-                        self.check_alert(val)
                         self.update_ui(val)
 
             except Exception as e:
                 print(f"Read Error: {e}")
                 self.is_running = False
                 break
-    
-    def check_alert(self, val):
-        # Alertă dacă este sub prag
-        if 2 <= val <= self.alert_threshold:
-            current_time = time.time()
-            # Limitează frecvența beep-urilor (de exemplu, maxim la fiecare 500ms dacă e necesar, dar aici dăm beep la fiecare pachet de date care e distanțat de delay-ul de 50ms al Arduino)
-            # Intervalul de 50ms ar putea fi prea rapid pentru beep-uri continue, așa că să-l limităm.
-            if current_time - self.last_beep_time > 0.3: # Beep maxim la fiecare 300ms
-                if system_os == "Windows":
-                    # Beep non-blocant nu este ușor posibil cu winsound.Beep (blochează).
-                    # Folosirea PlaySound cu SND_ASYNC ar putea fi mai bună, dar necesită un fișier wav.
-                    # Vom folosi Beep dar îl vom ține scurt (de exemplu 100ms)
-                    try:
-                        winsound.Beep(1000, 100)
-                    except:
-                        pass
-                else:
-                    # Mac/Linux
-                    print('\a')
-                self.last_beep_time = current_time
+
 
     def update_ui(self, value):
         # Planifică actualizarea pe firul principal
