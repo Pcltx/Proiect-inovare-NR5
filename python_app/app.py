@@ -23,7 +23,7 @@ class App(customtkinter.CTk):
 
         self.title("Dashboard")
         self.alert_threshold = 20 # Prag implicit în cm 
-        self.geometry("648x480")
+        self.geometry("480x648")
         self.resizable(False, False)
 
         # Layout: tot pe o singură coloană compactă
