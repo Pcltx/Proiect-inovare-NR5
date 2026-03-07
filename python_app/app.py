@@ -206,7 +206,7 @@ class App(customtkinter.CTk):# clasa penrtu interfata
         """Redimensionează imaginea de fundal la 4:3 centrat pe canvas."""
         if self.bg_image and w > 1 and h > 1:
             # Calculează dimensiunea 4:3 care încape în canvas
-            target_ratio = 4 / 3
+            target_ratio = 3 / 4
             canvas_ratio = w / h
             if canvas_ratio > target_ratio:
                 # Canvas mai lat decât 4:3 — limitează după înălțime
